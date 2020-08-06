@@ -11,9 +11,19 @@ namespace SuzuOffice
 	/// <typeparam name="AppType"></typeparam>
 	class TheOpenAppCapture<AppType> where AppType : class
 	{
+		public TheOpenAppCapture()
+		{
+			_FilePath = "";
+		}
+
 		public TheOpenAppCapture(string _FilePath)
 		{
-			if (!File.Exists(_FilePath)) throw new FileNotFoundException(this.GetType().Name + "\n\"" + _FilePath  + "\"");
+			this.Set(_FilePath);
+		}
+
+		public void Set(string _FilePath)
+		{
+			if (!File.Exists(_FilePath)) throw new FileNotFoundException(this.GetType().Name + "\n\"" + _FilePath + "\" は存在しないディレクトリです");
 
 			this._FilePath = _FilePath;
 		}
@@ -22,6 +32,8 @@ namespace SuzuOffice
 		/// <returns>開かれているかどうか</returns>
 		public bool IsFileOpened()
 		{
+			if (_FilePath == "") throw new Exception(this.GetType().Name + "\nファイル名が登録されていない状態で呼び出されました");
+
 			try
 			{
 				string _FileName = Path.GetFileName(_FilePath); //ファイル名を取り出す
@@ -41,13 +53,9 @@ namespace SuzuOffice
 				_WasFileOpned = false;
 				return false;
 			}
-			catch (FileNotFoundException e)
-			{
-				throw;
-			}
 			catch (Exception e)
 			{
-				throw;
+				throw new Exception(this.GetType().Name + "\nプロセスの確認に失敗しました", e);
 			}
 		}
 
@@ -66,19 +74,14 @@ namespace SuzuOffice
 
 				return _App;
 			}
-			catch (FileNotFoundException e)
-			{
-				throw;
-			}
 			catch (Exception e)
 			{
 				if(_App != null) { while (Marshal.ReleaseComObject(_App) > 0);	}
-
-				throw e;
+				
+				throw new Exception(this.GetType().Name + "実行中のアプリの確保に失敗しました", e);
 			}
 		}
-
-
+		
 		private string _FilePath;
 		private bool _WasFileOpned;
 	}
