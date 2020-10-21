@@ -11,6 +11,12 @@ namespace SuzuOffice
 
 	public class VBEOperater
 	{
+		public VBEOperater()
+		{
+			_ComponentTypes.Add(VBE.vbext_ComponentType.vbext_ct_StdModule);
+			_ComponentTypes.Add(VBE.vbext_ComponentType.vbext_ct_ClassModule);
+		}
+
 		/// <summary>
 		/// モジュールをクリアする。
 		/// </summary>
@@ -22,7 +28,7 @@ namespace SuzuOffice
 			foreach (VBE.VBComponent component in _Project.VBComponents)
 			{
 				//標準モジュール(.bas) / クラスモジュール(.cls)を全て削除
-				if ((component.Type == VBE.vbext_ComponentType.vbext_ct_StdModule) || (component.Type == VBE.vbext_ComponentType.vbext_ct_ClassModule))
+				if (_ComponentTypes.Contains(component.Type))
 				{
 					_Project.VBComponents.Remove(component);
 				}
@@ -64,7 +70,7 @@ namespace SuzuOffice
 			string file_name = "";
 			foreach (VBE.VBComponent component in _Project.VBComponents)
 			{
-				if ((component.Type == VBE.vbext_ComponentType.vbext_ct_StdModule) || (component.Type == VBE.vbext_ComponentType.vbext_ct_ClassModule))
+				if (_ComponentTypes.Contains(component.Type))
 				{
 					file_name = _Path + "\\" + component.Name;
 
@@ -110,7 +116,7 @@ namespace SuzuOffice
 			foreach (VBE.VBComponent component in _Project.VBComponents)
 			{
 				//標準モジュール(.bas) / クラスモジュール(.cls)を全て削除
-				if ((component.Type == VBE.vbext_ComponentType.vbext_ct_StdModule) || (component.Type == VBE.vbext_ComponentType.vbext_ct_ClassModule))
+				if (_ComponentTypes.Contains(component.Type))
 				{
 					return false;
 				}
@@ -163,8 +169,39 @@ namespace SuzuOffice
 			}
 		}
 
+		/// <summary>
+		/// モジュールを外部に書き出す
+		/// </summary>
+		/// <param name="_Project">書き出すディレクトリ</param>
+		/// <param name="_Path">書き出し先のディレクトリ</param>
+		/// <returns>書き出したディレクトリのパス</returns>
+		private string ExportModule(VBE.VBComponent component, in string _Path)
+		{
+
+			if (_ComponentTypes.Contains(component.Type))
+			{
+				string file_name = _Path + "\\" + component.Name;
+
+				switch (component.Type)
+				{
+					case VBE.vbext_ComponentType.vbext_ct_StdModule:	file_name += VBA_MODULE_EXTENSION; break;
+					case VBE.vbext_ComponentType.vbext_ct_ClassModule:	file_name += VBA_CLASS_EXTENSION; break;
+					case VBE.vbext_ComponentType.vbext_ct_MSForm:		file_name += VBA_FORM_EXTENSION; break;
+				}
+
+				component.Export(file_name);
+				
+				return file_name;
+			}
+
+			return "";
+		}
+
+		private List<VBE.vbext_ComponentType> _ComponentTypes = new List<VBE.vbext_ComponentType>();
+
 		private const string VBA_MODULE_EXTENSION = ".bas";
 		private const string VBA_CLASS_EXTENSION = ".cls";
+		private const string VBA_FORM_EXTENSION = ".frm";
 
 		private const string THIS_WORKBOOK = "ThisWorkbook";
 	}
