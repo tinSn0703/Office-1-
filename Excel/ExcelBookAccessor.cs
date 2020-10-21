@@ -6,14 +6,15 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Microsoft.Office.Interop.Excel;
-using Excel = Microsoft.Office.Interop.Excel;
 
-namespace SuzuOffice
+namespace SuzuOffice.Excel
 {
+	using Excel = Microsoft.Office.Interop.Excel;
+
 	/// <summary>
 	/// Excel book へのアクセスを担当する。
 	/// </summary>
-	class ExcelBookAccessor : IDisposable
+	public class ExcelBookAccessor : IDisposable
     {
 		public ExcelBookAccessor()
 		{

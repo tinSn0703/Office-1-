@@ -16,7 +16,7 @@ namespace SuzuOffice
 	/// <summary>
 	/// Visioのファイルの開き方を示すオブジェクト。
 	/// </summary>
-	abstract class VisioOpener
+	public abstract class VisioOpener
 	{
 		//----------------------------------------------------------------------//
 		//function

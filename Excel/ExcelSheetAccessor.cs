@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Microsoft.Office.Interop.Excel;
-using Excel = Microsoft.Office.Interop.Excel;
 
-namespace SuzuOffice
+namespace SuzuOffice.Excel
 {
-	class ExcelSheetAccessor : IDisposable
+	using Excel = Microsoft.Office.Interop.Excel;
+
+	public class ExcelSheetAccessor : IDisposable
 	{
 		public ExcelSheetAccessor()
 		{

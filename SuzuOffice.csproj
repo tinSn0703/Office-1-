@@ -46,7 +46,10 @@
     <Compile Include="Excel\CSVReader.cs" />
     <Compile Include="Excel\ExcelAppAccessor.cs" />
     <Compile Include="Excel\ExcelBookAccessor.cs" />
+    <Compile Include="Excel\ExcelOperator.cs" />
     <Compile Include="Excel\ExcelSheetAccessor.cs" />
+    <Compile Include="Excel\ExcelVBEOperator.cs" />
+    <Compile Include="VBEOperater.cs" />
     <Compile Include="ExtensionChecker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TheOpenAppCapture.cs" />

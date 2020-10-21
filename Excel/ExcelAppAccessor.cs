@@ -6,17 +6,18 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Microsoft.Office.Interop.Excel;
-using Excel = Microsoft.Office.Interop.Excel;
 using System.IO;
 
-namespace SuzuOffice
+namespace SuzuOffice.Excel
 {
+	using Excel = Microsoft.Office.Interop.Excel;
+
 	/// <summary>
 	/// Excelのアプリケーションをポンポン開くとおいしくないから、一度だけにしたい。
 	/// とりあえず作った。まだよくわからないので試行していく。
 	/// このオブジェクトがExcelのアプリへのアクセスを担当する.
 	/// </summary>
-	class ExcelAppAccessor : IDisposable
+	public class ExcelAppAccessor : IDisposable
 	{
 		//----------------------------------------------------------------------//
 		//const

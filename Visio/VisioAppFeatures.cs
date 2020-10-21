@@ -7,7 +7,7 @@ using Visio = Microsoft.Office.Interop.Visio;
 
 namespace SuzuOffice
 {
-	class VisioAppFeatures
+	public class VisioAppFeatures
 	{
 		//----------------------------------------------------------------------//
 		//const

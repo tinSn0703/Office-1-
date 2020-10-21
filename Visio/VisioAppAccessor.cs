@@ -12,14 +12,14 @@ namespace SuzuOffice
 {
 	/************************************************************************/	
 
-	class VisioOpenerSelecter
+	public class VisioOpenerSelecter
 	{
 		public VisioOpenerSelecter()
 		{
 		}
 	}
 
-	class VisioAppAccessor : IDisposable
+	public class VisioAppAccessor : IDisposable
 	{
 		//----------------------------------------------------------------------//
 		//public function
