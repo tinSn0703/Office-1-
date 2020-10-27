@@ -6,11 +6,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using Visio = Microsoft.Office.Interop.Visio;
+
+#if USE_VISIO
 
 namespace SuzuOffice
 {
-	/************************************************************************/	
+	using Visio = Microsoft.Office.Interop.Visio;
+
+	/************************************************************************/
 
 	public class VisioOpenerSelecter
 	{
@@ -186,3 +189,5 @@ namespace SuzuOffice
 
 	/************************************************************************/
 }
+
+#endif

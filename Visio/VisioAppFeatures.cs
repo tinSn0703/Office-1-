@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Visio = Microsoft.Office.Interop.Visio;
+
+#if USE_VISIO
 
 namespace SuzuOffice
 {
+	using Visio = Microsoft.Office.Interop.Visio;
+
 	public class VisioAppFeatures
 	{
 		//----------------------------------------------------------------------//
@@ -84,3 +87,5 @@ namespace SuzuOffice
 		private VisioAppAccessor _App;
 	}
 }
+
+#endif

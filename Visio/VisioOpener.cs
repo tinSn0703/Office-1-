@@ -5,10 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-using Visio = Microsoft.Office.Interop.Visio;
+
+#if USE_VISIO
 
 namespace SuzuOffice
 {
+	using Visio = Microsoft.Office.Interop.Visio;
+
 	/************************************************************************/
 
 	//----------------------------------------------------------------------//
@@ -213,3 +216,5 @@ namespace SuzuOffice
 
 	/************************************************************************/
 }
+
+#endif

@@ -24,7 +24,7 @@ namespace SuzuOffice
 		public void ClearModules(VBE.VBProject _Project)
 		{
 			if (_Project is null)	throw new ArgumentNullException(nameof(_Project));
-
+			      
 			foreach (VBE.VBComponent component in _Project.VBComponents)
 			{
 				//標準モジュール(.bas) / クラスモジュール(.cls)を全て削除
