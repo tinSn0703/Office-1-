@@ -19,11 +19,11 @@ namespace SuzuOffice.Excel
 		/// モジュールをクリアする。
 		/// </summary>
 		/// <param name="_Book">モジュールをクリアするブック</param>
-		public void ClearModules(Excel.Workbook _Book)
+		public void Clear(Excel.Workbook _Book)
 		{
 			if (_Book is null)	throw new ArgumentNullException(nameof(_Book));
 
-			this._Project.ClearModules(_Book.VBProject);
+			this._Project.Clear(_Book.VBProject);
 		}
 
 		/// <summary>
@@ -32,11 +32,24 @@ namespace SuzuOffice.Excel
 		/// <param name="_Book">モジュールを取り込ませるブック</param>
 		/// <param name="_PathList">取り込みたいモジュールの絶対パス</param>
 		/// <exception cref="ArgumentNullException"></exception>
-		public void ImportModules(Excel.Workbook _Book, List<string> _PathList)
+		public void Import(Excel.Workbook _Book, List<string> _PathList)
 		{
 			if (_Book is null) throw new ArgumentNullException(nameof(_Book));
 
-			this._Project.ImportModules(_Book.VBProject, _PathList);
+			this._Project.Import(_Book.VBProject, _PathList);
+		}
+
+		/// <summary>
+		/// モジュールを取り込む
+		/// </summary>
+		/// <param name="_Book">モジュールを取り込ませるブック</param>
+		/// <param name="_Path">取り込みたいモジュールの絶対パス</param>
+		/// <exception cref="ArgumentNullException"></exception>
+		public void Import(Excel.Workbook _Book, string _Path)
+		{
+			if (_Book is null) throw new ArgumentNullException(nameof(_Book));
+
+			this._Project.Import(_Book.VBProject, _Path);
 		}
 
 		/// <summary>
@@ -45,11 +58,25 @@ namespace SuzuOffice.Excel
 		/// <param name="_Book">モジュールを書き出したいブック</param>
 		/// <param name="_Path">書き出し先のディレクトリ</param>
 		/// <returns>書き出したディレクトリのパス</returns>
-		public List<string> ExportModules(Excel.Workbook _Book, in string _Path)
+		public List<string> Export(Excel.Workbook _Book, in string _Path)
 		{
 			if (_Book is null) throw new ArgumentNullException(nameof(_Book));
 
-			return this._Project.ExportModules(_Book.VBProject, _Path);
+			return this._Project.Export(_Book.VBProject, _Path);
+		}
+
+		/// <summary>
+		/// モジュールを外部に書き出す
+		/// </summary>
+		/// <param name="_Book">モジュールを書き出したいブック</param>
+		/// <param name="_Path">書き出し先のディレクトリ</param>
+		/// <param name="_ModuleName">書き出したいモジュール名</param>
+		/// <returns>書き出したディレクトリのパス</returns>
+		public string Export(Excel.Workbook _Book, in string _Path, in string _ModuleName)
+		{
+			if (_Book is null) throw new ArgumentNullException(nameof(_Book));
+
+			return this._Project.Export(_Book.VBProject, _Path, _ModuleName);
 		}
 
 		private VBEOperater _Project;

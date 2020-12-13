@@ -9,6 +9,26 @@ namespace SuzuOffice
 {
 	using VBE = Microsoft.Vbe.Interop;
 
+	public class ModuleExtension
+	{
+		public string VBA_MODULE => ".bas";
+		public string VBA_CLASS => ".cls";
+		public string VBA_FORM => ".frm";
+
+		public string Convert(VBE.vbext_ComponentType _Type)
+		{
+			switch (_Type)
+			{
+				case VBE.vbext_ComponentType.vbext_ct_StdModule:	return VBA_MODULE;
+				case VBE.vbext_ComponentType.vbext_ct_Document:		return VBA_CLASS;
+				case VBE.vbext_ComponentType.vbext_ct_ClassModule:	return VBA_CLASS;
+				case VBE.vbext_ComponentType.vbext_ct_MSForm:		return VBA_FORM;
+			}
+
+			return "";
+		}
+	}
+
 	public class VBEOperater
 	{
 		public VBEOperater()
@@ -21,38 +41,47 @@ namespace SuzuOffice
 		/// モジュールをクリアする。
 		/// </summary>
 		/// <param name="_Project">モジュールをクリアするプロジェクト</param>
-		public void ClearModules(VBE.VBProject _Project)
+		public void Clear(VBE.VBProject _Project)
 		{
 			if (_Project is null)	throw new ArgumentNullException(nameof(_Project));
 			      
-			foreach (VBE.VBComponent component in _Project.VBComponents)
+			foreach (VBE.VBComponent _Component in _Project.VBComponents)
 			{
-				//標準モジュール(.bas) / クラスモジュール(.cls)を全て削除
-				if (_ComponentTypes.Contains(component.Type))
-				{
-					_Project.VBComponents.Remove(component);
-				}
+				ClearModule(_Project, _Component);
 			}
 
 			//消去の成否の確認
-			if (IsModuleClearSuccess(_Project)) throw new Exception("標準モジュール,クラスモジュールの削除に失敗しました");
+			if (IsModuleClearSuccess(_Project)) throw new Exception("モジュールの削除に失敗しました");
 		}
 
 		/// <summary>
 		/// モジュールを取り込む
 		/// </summary>
 		/// <param name="_Project">モジュールを取り込ませるプロジェクト</param>
-		/// <param name="_PathList">取り込みたいモジュールの絶対パス</param>
-		public void ImportModules(VBE.VBProject _Project, List<string> _PathList)
+		/// <param name="_PathList">取り込みたいモジュールの絶対パスの一覧</param>
+		public void Import(VBE.VBProject _Project, List<string> _PathList)
 		{
-			if (_Project is null)		throw new ArgumentNullException(nameof(_Project));
+			if (_Project is null)	throw new ArgumentNullException(nameof(_Project));
 			if (_PathList is null)	throw new ArgumentNullException(nameof(_PathList));
 
-			foreach (string module_path in _PathList)
+			foreach (string _Path in _PathList)
 			{
-				ImportModule(_Project, module_path);
+				ImportModule(_Project, _Path);
 			}
 		}
+
+		/// <summary>
+		/// モジュールを取り込む
+		/// </summary>
+		/// <param name="_Project">モジュールを取り込ませるプロジェクト</param>
+		/// <param name="_Path">取り込みたいモジュールの絶対パス</param>
+		public void Import(VBE.VBProject _Project, in string _Path)
+		{
+			if (_Project is null) throw new ArgumentNullException(nameof(_Project));
+
+			ImportModule(_Project, _Path);
+		}
+
 
 		/// <summary>
 		/// モジュールを外部に書き出す
@@ -60,148 +89,199 @@ namespace SuzuOffice
 		/// <param name="_Project">書き出すディレクトリ</param>
 		/// <param name="_Path">書き出し先のディレクトリ</param>
 		/// <returns>書き出したディレクトリのパス</returns>
-		public List<string> ExportModules(VBE.VBProject _Project, in string _Path)
+		public List<string> Export(VBE.VBProject _Project, in string _Path)
 		{
-			if (_Project is null)	throw new ArgumentNullException(nameof(_Project));
+			if (_Project is null)					throw new ArgumentNullException(nameof(_Project));
+			if (_Project.VBComponents.Count < 1)	throw new ArgumentException("モジュールが存在しないプロジェクトです", nameof(_Project));
 			if (string.IsNullOrWhiteSpace(_Path))	throw new ArgumentException("無効なパスです", nameof(_Path));
+			if (Directory.Exists(_Path))			throw new DirectoryNotFoundException("[" + _Path + "]は無効なパスです");
 
-			List<string> module_pathes = new List<string>();
-
-			string file_name = "";
-			foreach (VBE.VBComponent component in _Project.VBComponents)
+			List<string> _ModulePathes = new List<string>();
+			
+			foreach (VBE.VBComponent _Component in _Project.VBComponents)
 			{
-				if (_ComponentTypes.Contains(component.Type))
-				{
-					file_name = _Path + "\\" + component.Name;
+				string _FileName = ExportModule(_Component, _Path);
 
-					switch (component.Type)
-					{
-						case VBE.vbext_ComponentType.vbext_ct_StdModule:	file_name += VBA_MODULE_EXTENSION;	break;
-						case VBE.vbext_ComponentType.vbext_ct_ClassModule:	file_name += VBA_CLASS_EXTENSION;	break;
-					}
-
-					component.Export(file_name);
-					module_pathes.Add(file_name);
-				}
+				if (_FileName != "") _ModulePathes.Add(_FileName);
 			}
 
-			file_name = _Path + "//" + THIS_WORKBOOK + VBA_CLASS_EXTENSION;
-			_Project.VBComponents.Item(THIS_WORKBOOK).Export(file_name);
-			module_pathes.Add(file_name);
+			return _ModulePathes;
+		}
 
-			return module_pathes;
+		/// <summary>
+		/// モジュールを外部に書き出す
+		/// </summary>
+		/// <param name="_Project">書き出すディレクトリ</param>
+		/// <param name="_Path">書き出し先のディレクトリ</param>
+		/// <param name="_ModuleName">書き出したいモジュール名</param>
+		/// <returns>書き出したディレクトリのパス</returns>
+		public string Export(VBE.VBProject _Project, in string _Path, in string _ModuleName)
+		{
+			if (_Project is null)						throw new ArgumentNullException(nameof(_Project), "プロジェクトが存在しません");
+			if (_Project.VBComponents.Count < 1)		throw new ArgumentException("モジュールが存在しないプロジェクトです", nameof(_Project));
+			if (string.IsNullOrWhiteSpace(_Path))		throw new ArgumentNullException(nameof(_Path), "無効なパスです");
+			if (Directory.Exists(_Path))				throw new DirectoryNotFoundException("[" + _Path + "]は無効なパスです");
+			if (string.IsNullOrWhiteSpace(_ModuleName))	throw new ArgumentException("無効なモジュール名です", nameof(_ModuleName));
+
+			string _FileName;
+			try
+			{
+				_FileName = ExportModule(_Project.VBComponents.Item(_ModuleName), _Path);
+			}
+			catch (IndexOutOfRangeException e)
+			{
+				throw new IndexOutOfRangeException("[" + _ModuleName + "]は存在しないモジュールです。", e);
+			}
+
+			return ((_FileName != "") ? _FileName : throw new Exception("[" + _ModuleName + "]のExportに失敗しました。"));
 		}
 
 		//*************************************************************************************************//
 		//private method
 		//*************************************************************************************************//
 
-		/// <summary>
-		/// ThisWorkBookをクリアする
-		/// </summary>
-		/// <param name="_Project"></param>
-		/// <returns>クリア前のコード</returns>
-		private string ClearThisWorkbookModule(VBE.VBProject _Project)
+		private void ClearModule(VBE.VBProject _Project, VBE.VBComponent _Component)
 		{
-			var conponent = _Project.VBComponents.Item(THIS_WORKBOOK);
-			int line_count = conponent.CodeModule.CountOfLines;
-			string code = conponent.CodeModule.get_Lines(1, line_count);
-			conponent.CodeModule.DeleteLines(1, line_count);
-
-			return code;
+			if (_ComponentTypes.Contains(_Component.Type))
+			{
+				if (VBE.vbext_ComponentType.vbext_ct_Document == _Component.Type)
+				{
+					ClearDocumentModule(_Component);
+				}
+				else
+				{
+					_Project.VBComponents.Remove(_Component);
+				}
+			}
 		}
 
+		private void ClearDocumentModule(VBE.VBComponent _Component)
+		{
+			int line_count = _Component.CodeModule.CountOfLines;
+			_Component.CodeModule.DeleteLines(1, line_count);
+		}
+
+		/// <summary>
+		/// モジュールのクリアに成功しましたか?
+		/// </summary>
+		/// <param name="_Project">確認するプロジェクト</param>
+		/// <returns>Yes or No</returns>
 		private bool IsModuleClearSuccess(VBE.VBProject _Project)
 		{
 			foreach (VBE.VBComponent component in _Project.VBComponents)
 			{
-				//標準モジュール(.bas) / クラスモジュール(.cls)を全て削除
-				if (_ComponentTypes.Contains(component.Type))
-				{
-					return false;
-				}
+				if (_ComponentTypes.Contains(component.Type)) return false;
 			}
 
 			return true;
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="_Project"></param>
+		/// <param name="_ModuleName"></param>
+		/// <returns></returns>
+		private bool IsModuleExits(VBE.VBProject _Project, in string _ModuleName)
+		{
+			try
+			{
+				_Project.VBComponents.Item(_ModuleName);
+			}
+			catch (IndexOutOfRangeException)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		/// <summary>
+		/// モジュールのコードを切り取る。
+		/// </summary>
+		/// <param name="_Component">切り取るモジュール</param>
+		/// <returns>クリア前のコード</returns>
+		private string CutDoucumentModule(VBE.VBComponent _Component)
+		{
+			int _LineCount = _Component.CodeModule.CountOfLines;
+			string _Code = _Component.CodeModule.get_Lines(1, _LineCount);
+			_Component.CodeModule.DeleteLines(1, _LineCount);
+
+			return _Code;
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="_Project"></param>
+		/// <param name="_Path"></param>
 		private void ImportModule(VBE.VBProject _Project, in string _Path)
 		{
 			if (string.IsNullOrWhiteSpace(_Path))	throw new ArgumentException("無効なパスです", nameof(_Path));
+			if (!File.Exists(_Path))				throw new FileNotFoundException("[" + _Path + "]は無効なパスです");
 
-			if (File.Exists(_Path))
+			var _ModuleName = Path.GetFileNameWithoutExtension(_Path);
+			if (IsModuleExits(_Project, _ModuleName))
 			{
-				if (Path.GetFileName(_Path) == THIS_WORKBOOK + VBA_CLASS_EXTENSION)
+				var _Component = _Project.VBComponents.Item(_ModuleName);
+
+				if (_Component.Type == VBE.vbext_ComponentType.vbext_ct_Document)
 				{
-					ImportThisWorkbookModule(_Project, _Path);
+					if (!_ComponentTypes.Contains(VBE.vbext_ComponentType.vbext_ct_Document)) return;
+
+					ImportDocumentModule(_Component, _Path);
 				}
 				else
 				{
-					_Project.VBComponents.Import(_Path);
+					ClearModule(_Project, _Component);
 				}
 			}
-			else
-			{
-				throw new FileNotFoundException("[" + _Path + "]は無効なパスです");
-			}
+
+			_Project.VBComponents.Import(_Path);
 		}
 
-		private void ImportThisWorkbookModule(VBE.VBProject _Project, in string _Path)
+		/// <summary>
+		/// ドキュメントモジュールをインポートする
+		/// </summary>
+		/// <param name="_Project"></param>
+		/// <param name="_Path"></param>
+		private void ImportDocumentModule(VBE.VBComponent _Component, in string _Path)
 		{
-			string original_code = ClearThisWorkbookModule(_Project);
-
+			string _Code = CutDoucumentModule(_Component);
 			try
 			{
-				StreamReader _Reader = new StreamReader(_Path, Encoding.GetEncoding("Shift_JIS"));
-
-				var conponent = _Project.VBComponents.Item(THIS_WORKBOOK);
-				conponent.CodeModule.AddFromString(_Reader.ReadToEnd());
+				_Component.CodeModule.AddFromString(new StreamReader(_Path, Encoding.GetEncoding("Shift_JIS")).ReadToEnd());
 			}
 			catch
 			{
-				if (original_code != "")
-				{
-					var conponent = _Project.VBComponents.Item(THIS_WORKBOOK);
-					conponent.CodeModule.AddFromString(original_code);
-				}
-
-				throw new Exception("ThisWorkbookの更新に失敗しました");
+				if (_Code != "") _Component.CodeModule.AddFromString(_Code);
+				
+				throw new Exception("[" + _Path + "]のインポートに失敗しました");
 			}
 		}
 
 		/// <summary>
-		/// モジュールを外部に書き出す
+		/// モジュールをエクスポートする
 		/// </summary>
-		/// <param name="_Project">書き出すディレクトリ</param>
-		/// <param name="_Path">書き出し先のディレクトリ</param>
-		/// <returns>書き出したディレクトリのパス</returns>
-		private string ExportModule(VBE.VBComponent component, in string _Path)
+		/// <param name="_Component">エクスポートするモジュール</param>
+		/// <param name="_Path">エクスポート先のディレクトリ</param>
+		/// <returns>エクスポートしたモジュールのパス</returns>
+		private string ExportModule(VBE.VBComponent _Component, in string _Path)
 		{
-
-			if (_ComponentTypes.Contains(component.Type))
+			if (_ComponentTypes.Contains(_Component.Type))
 			{
-				string file_name = _Path + "\\" + component.Name;
+				string _FileName = _Path + "\\" + _Component.Name + _Extension.Convert(_Component.Type);
 
-				switch (component.Type)
-				{
-					case VBE.vbext_ComponentType.vbext_ct_StdModule:	file_name += VBA_MODULE_EXTENSION; break;
-					case VBE.vbext_ComponentType.vbext_ct_ClassModule:	file_name += VBA_CLASS_EXTENSION; break;
-					case VBE.vbext_ComponentType.vbext_ct_MSForm:		file_name += VBA_FORM_EXTENSION; break;
-				}
-
-				component.Export(file_name);
+				_Component.Export(_FileName);
 				
-				return file_name;
+				return _FileName;
 			}
 
 			return "";
 		}
 
 		private List<VBE.vbext_ComponentType> _ComponentTypes = new List<VBE.vbext_ComponentType>();
-
-		private const string VBA_MODULE_EXTENSION = ".bas";
-		private const string VBA_CLASS_EXTENSION = ".cls";
-		private const string VBA_FORM_EXTENSION = ".frm";
+		private ModuleExtension _Extension = new ModuleExtension();
 
 		private const string THIS_WORKBOOK = "ThisWorkbook";
 	}
