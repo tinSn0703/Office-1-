@@ -176,12 +176,6 @@ namespace SuzuOffice
 			return true;
 		}
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="_Project"></param>
-		/// <param name="_ModuleName"></param>
-		/// <returns></returns>
 		private bool IsModuleExits(VBE.VBProject _Project, in string _ModuleName)
 		{
 			try
