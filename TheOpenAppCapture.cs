@@ -1,88 +1,145 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace SuzuOffice
+namespace Office
 {
-	/// <summary>
-	/// アプリが実行されていた場合、そのオブジェクトを取得する
-	/// </summary>
-	/// <typeparam name="AppType"></typeparam>
-	class TheOpenAppCapture<AppType> where AppType : class
+	using VBE = Microsoft.Vbe.Interop;
+
+	class VBProjectOperater
 	{
-		public TheOpenAppCapture()
+		/// <summary>
+		/// モジュールをクリアする。
+		/// </summary>
+		/// <param name="_Project">モジュールをクリアするプロジェクト</param>
+		public void ClearModules(VBE.VBProject _Project)
 		{
-			_FilePath = "";
+			foreach (VBE.VBComponent component in _Project.VBComponents)
+			{
+				//標準モジュール(.bas) / クラスモジュール(.cls)を全て削除
+				if ((component.Type == VBE.vbext_ComponentType.vbext_ct_StdModule) || (component.Type == VBE.vbext_ComponentType.vbext_ct_ClassModule))
+				{
+					_Project.VBComponents.Remove(component);
+				}
+			}
+
+			//消去の成否の確認
+			if (IsModuleClearSuccess(_Project)) throw new Exception("標準モジュール,クラスモジュールの削除に失敗しました");
 		}
 
-		public TheOpenAppCapture(string _FilePath)
+		/// <summary>
+		/// モジュールを取り込む
+		/// </summary>
+		/// <param name="_Project">モジュールを取り込ませるプロジェクト</param>
+		/// <param name="module_pathes">取り込みたいモジュールの絶対パス</param>
+		public void ImportModules(VBE.VBProject _Project, List<string> module_pathes)
 		{
-			this.Set(_FilePath);
+			foreach (string module_path in module_pathes)
+			{
+				ImportModule(_Project, module_path);
+			}
 		}
 
-		public void Set(string _FilePath)
+		/// <summary>
+		/// モジュールを外部に書き出す
+		/// </summary>
+		/// <param name="_Project">書き出すディレクトリ</param>
+		/// <param name="path">書き出し先のディレクトリ</param>
+		/// <returns>書き出したディレクトリのパス</returns>
+		public List<string> ExportModules(VBE.VBProject _Project, in string path)
 		{
-			if (!File.Exists(_FilePath)) throw new FileNotFoundException(this.GetType().Name + "\n\"" + _FilePath + "\" は存在しないディレクトリです");
+			List<string> module_pathes = new List<string>();
 
-			this._FilePath = _FilePath;
+			foreach (VBE.VBComponent component in _Project.VBComponents)
+			{
+				if ((component.Type == VBE.vbext_ComponentType.vbext_ct_StdModule) || (component.Type == VBE.vbext_ComponentType.vbext_ct_ClassModule))
+				{
+					string file_name = path + "\\" + component.Name;
+
+					switch (component.Type)
+					{
+						case VBE.vbext_ComponentType.vbext_ct_StdModule:	file_name += VBA_MODULE_EXTENSION;	break;
+						case VBE.vbext_ComponentType.vbext_ct_ClassModule:	file_name += VBA_CLASS_EXTENSION;	break;
+					}
+
+					component.Export(file_name);
+					module_pathes.Add(file_name);
+				}
+			}
+
+			return module_pathes;
 		}
 
-		/// <summary>指定したファイルは、既に開かれていますか?</summary>
-		/// <returns>開かれているかどうか</returns>
-		public bool IsFileOpened()
+		private string ClearThisWorkbookModule(VBE.VBProject _Project)
 		{
-			if (_FilePath == "") throw new Exception(this.GetType().Name + "\nファイル名が登録されていない状態で呼び出されました");
+			var conponent = _Project.VBComponents.Item("ThisWorkbook");
+			int line_count = conponent.CodeModule.CountOfLines;
+			string code = conponent.CodeModule.get_Lines(1, line_count);
+			conponent.CodeModule.DeleteLines(1, line_count);
+
+			return code;
+		}
+
+		private bool IsModuleClearSuccess(VBE.VBProject _Project)
+		{
+			foreach (VBE.VBComponent component in _Project.VBComponents)
+			{
+				//標準モジュール(.bas) / クラスモジュール(.cls)を全て削除
+				if ((component.Type == VBE.vbext_ComponentType.vbext_ct_StdModule) || (component.Type == VBE.vbext_ComponentType.vbext_ct_ClassModule))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		private void ImportModule(VBE.VBProject _Project, string module_path)
+		{
+			if (File.Exists(module_path))
+			{
+				if (Path.GetFileName(module_path) == "ThisWorkbook.cls")
+				{
+					LoadModuleThisWorkbook(_Project, module_path);
+				}
+				else
+				{
+					_Project.VBComponents.Import(module_path);
+				}
+			}
+			else
+			{
+				throw new Exception(module_path + "は存在しません");
+			}
+		}
+
+		private void LoadModuleThisWorkbook(VBE.VBProject _Project, string module_path)
+		{
+			string original_code = ClearThisWorkbookModule(_Project);
 
 			try
 			{
-				string _FileName = Path.GetFileName(_FilePath); //ファイル名を取り出す
-				foreach (Process _Process in Process.GetProcesses())
-				{
-					//関係ないプロセス。スキップ
-					if (_Process.MainWindowTitle.Length == 0) continue;
+				StreamReader _Reader = new StreamReader(module_path, Encoding.GetEncoding("Shift_JIS"));
 
-					//現在開かれているプロセス名と比較し、ファイルが開かれているか確認する
-					if (_Process.MainWindowTitle.IndexOf(_FileName) >= 0)
-					{
-						_WasFileOpned = true;
-						return true;
-					}
+				var conponent = _Project.VBComponents.Item("ThisWorkbook");
+				conponent.CodeModule.AddFromString(_Reader.ReadToEnd());
+			}
+			catch
+			{
+				if (original_code != "")
+				{
+					var conponent = _Project.VBComponents.Item("ThisWorkbook");
+					conponent.CodeModule.AddFromString(original_code);
 				}
 
-				_WasFileOpned = false;
-				return false;
-			}
-			catch (Exception e)
-			{
-				throw new Exception(this.GetType().Name + "\nプロセスの確認に失敗しました", e);
+				throw new Exception("ThisWorkbookのマクロの更新に失敗しました");
 			}
 		}
 
-		/// <summary>実行中のアプリを取得する</summary>
-		/// <returns>実行中のアプリ</returns>
-		public AppType GetRunningApp()
-		{
-			AppType _App = null;
-
-			try
-			{
-				if (!_WasFileOpned) { if (!IsFileOpened()) return null; }
-
-				_App = Marshal.BindToMoniker(_FilePath) as AppType;
-				//if (_App == null) throw new Exception(_FilePath + "\n確保に失敗");
-
-				return _App;
-			}
-			catch (Exception e)
-			{
-				if(_App != null) { while (Marshal.ReleaseComObject(_App) > 0);	}
-				
-				throw new Exception(this.GetType().Name + "実行中のアプリの確保に失敗しました", e);
-			}
-		}
-		
-		private string _FilePath;
-		private bool _WasFileOpned;
+		private const string VBA_MODULE_EXTENSION = ".bas";
+		private const string VBA_CLASS_EXTENSION = ".cls";
 	}
 }

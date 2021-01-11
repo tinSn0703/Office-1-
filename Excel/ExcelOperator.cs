@@ -14,54 +14,83 @@ namespace SuzuOffice.Excel
 	{
 		public ExcelOperator()	{}
 
-		/// <summary>
-		/// Excel Bookを開く。
-		/// </summary>
+		/// <summary>Excel Bookを開く</summary>
 		/// <param name="_Excel">Excel Application</param>
-		/// <param name="_WorkBookPath">開くBookのパス</param>
+		/// <param name="_FilePath">開くBookのパス</param>
 		/// <returns></returns>
-		public Excel.Workbook Open(ref ExcelAppAccessor _Excel, in string _WorkBookPath)
+		public ExcelBookAccessor Open(ExcelAppAccessor _Excel, in string _FilePath)
 		{
 			try
 			{
-				if (this.IsFileOpened(_WorkBookPath)) return GetRunningApp(ref _Excel, _WorkBookPath);
+				if (this.IsFileOpened(_FilePath)) return GetRunningApp(_Excel, _FilePath);
 			}
 			catch (Exception e)
 			{
-				if (e.Message.IndexOf(_WorkBookPath) < 0) throw;
+				if (e.Message.IndexOf(_FilePath) < 0) throw;
 				Console.WriteLine(e);
 			}
 
-			return _Excel.Books.Open(_WorkBookPath);
+			return new ExcelBookAccessor(_Excel.Books.Open(_FilePath));
 		}
 
-		/// <summary>
-		/// Excel Bookを新規作成する。
-		/// </summary>
+		/// <summary>Excel Bookを新規作成する</summary>
 		/// <param name="_Excel">Excel Application</param>
 		/// <param name="_WorkBookPath">新規作成先のパス</param>
 		/// <returns></returns>
-		public Excel.Workbook Add(ExcelAppAccessor _Excel, in string _WorkBookPath)
+		public ExcelBookAccessor Add(ExcelAppAccessor _Excel, in string _WorkBookPath)
 		{
-			Microsoft.Office.Interop.Excel.Workbook _ExcelBook = null;
+			Excel.Workbook _Book = null;
 
 			try
 			{
-				_ExcelBook = _Excel.Books.Add();
-				_ExcelBook.SaveAs(_WorkBookPath);
-
-				return _ExcelBook;
+				_Book = _Excel.Books.Add();
+				_Book.SaveAs(_WorkBookPath);
 			}
-			catch (Exception e)
+			catch
 			{
-				this.ReleaseObject(_ExcelBook);
-				throw e;
+				this.ReleaseObject(_Book);
+				throw;
 			}
+
+			return new ExcelBookAccessor(_Book);
 		}
 
-		public void GetSheet(Excel.Workbook _Book)
+		public ExcelSheetAccessor GetSheet(ExcelBookAccessor _Book, object _SheetIndex)
 		{
-			_Book.Close();
+			return new ExcelSheetAccessor(_Book.Sheets[_SheetIndex]);
+		}
+
+		public ExcelSheetAccessor AddSheet(ExcelBookAccessor _Book, string _SheetName)
+		{
+			Excel.Worksheet _Sheet = null;
+
+			try
+			{
+				_Sheet = _Book.Sheets.Add();
+				_Sheet.Name = _SheetName;
+			}
+			catch
+			{
+				this.ReleaseObject(_Sheet);
+				throw;
+			}
+
+			return new ExcelSheetAccessor(_Sheet);
+		}
+
+		public void Save(ExcelBookAccessor _Book, string _FilePath = "")
+		{
+			if (_FilePath != "")
+			{
+				_Book.Book.SaveAs(_FilePath);
+				return;
+			}
+
+			if (_Book.Book.Path != "")
+			{
+				_Book.Book.Save();
+				return;
+			}
 		}
 
 		public void Close(Excel.Workbook _Book)
@@ -73,9 +102,7 @@ namespace SuzuOffice.Excel
 		//private method
 		//*************************************************************************************************//
 
-		/// <summary>
-		/// 指定したファイルは、既に開かれていますか?
-		/// </summary>
+		/// <summary>指定したファイルは、既に開かれていますか?</summary>
 		/// <param name="_FilePath">調べるファイルのパス</param>
 		/// <returns></returns>
 		private bool IsFileOpened(in string _FilePath)
@@ -93,35 +120,31 @@ namespace SuzuOffice.Excel
 			return false;
 		}
 
-		/// <summary>
-		/// 実行中のExcelブックを取得する
-		/// </summary>
+		/// <summary>実行中のExcelブックを取得する</summary>
 		/// <param name="_FilePath">実行中ブックのパス</param>
 		/// <returns>実行中のブック</returns>
-		private Excel.Workbook GetRunningApp(ref ExcelAppAccessor _Excel, in string _FilePath)
+		private ExcelBookAccessor GetRunningApp(ExcelAppAccessor _Excel, in string _FilePath)
 		{
-			Excel.Workbook _ExcelBook = null;
+			Excel.Workbook _Book = null;
 
 			try
 			{
-				_ExcelBook = Marshal.BindToMoniker(_FilePath) as Excel.Workbook;
+				_Book = Marshal.BindToMoniker(_FilePath) as Excel.Workbook;
 
-				if (_ExcelBook == null) throw new System.Exception("[" + _FilePath + "]の確保に失敗しました");
+				if (_Book == null) throw new System.Exception("[" + _FilePath + "]の確保に失敗しました");
 
-				_Excel.Open(_ExcelBook.Application);
-
-				return _ExcelBook;
+				_Excel.Open(_Book.Application);
 			}
 			catch
 			{
-				ReleaseObject(_ExcelBook);
+				ReleaseObject(_Book);
 				throw;
 			}
+
+			return new ExcelBookAccessor(_Book);
 		}
 
-		/// <summary>
-		/// Objectを開放する
-		/// </summary>
+		/// <summary>Objectを開放する</summary>
 		private void ReleaseObject(object _Obj)
 		{
 			if (_Obj != null)

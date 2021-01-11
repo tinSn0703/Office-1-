@@ -34,9 +34,7 @@ namespace SuzuOffice.Excel
 			_ReferenceCounter += 1;
 		}
 
-		/// <summary>
-		/// Excel Applicationを開く
-		/// </summary>
+		/// <summary>Excelを開く</summary>
 		/// <param name="_SecuredApp">既に開かれているApplicationがある場合</param>
 		public void Open(Excel.Application _SecuredApp = null)
 		{
@@ -50,9 +48,7 @@ namespace SuzuOffice.Excel
 			_Books = _App.Workbooks;
 		}
 
-		/// <summary>
-		/// アプリを閉じる
-		/// </summary>
+		/// <summary>Excelを閉じる</summary>
 		public void Close()
 		{
 			if (_App != null)
@@ -63,9 +59,7 @@ namespace SuzuOffice.Excel
 			}
 		}
 
-		/// <summary>
-		/// 確保されたリソースの解放
-		/// </summary>
+		/// <summary>確保されたリソースの解放</summary>
 		public void Dispose()
 		{
 			this.Dispose(true);
@@ -81,8 +75,8 @@ namespace SuzuOffice.Excel
 			this.Dispose(false);
 		}
 
-		public Application Application { get => _App; }
-		public Workbooks Books { get => _Books; }
+		public ref Application Application { get => ref _App; }
+		public ref Workbooks Books { get => ref _Books; }
 
 		//--------------------------------------------------------------------------------------//
 
@@ -104,9 +98,7 @@ namespace SuzuOffice.Excel
 			}
 		}
 
-		/// <summary>
-		/// 確保されたリソースの解放
-		/// </summary>
+		/// <summary>確保されたリソースの解放</summary>
 		/// <param name="_Disposing">GCが解放してくれるリソースを開放するかしないか</param>
 		protected virtual void Dispose(in bool _Disposing)
 		{

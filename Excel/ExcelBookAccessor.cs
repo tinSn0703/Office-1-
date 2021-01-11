@@ -16,126 +16,45 @@ namespace SuzuOffice.Excel
 	/// </summary>
 	public class ExcelBookAccessor : IDisposable
     {
+		//*************************************************************************************************//
+		//public method
+		//*************************************************************************************************//
+		
 		public ExcelBookAccessor()
 		{
-			this._ExcelBook = null;
-			this._ExcelSheets = null;
+			this._Book = null;
+			this._Sheets = null;
 		}
 
 		public ExcelBookAccessor(Excel.Workbook _ExcelBook)
 		{
-			this.SetBook(_ExcelBook);
+			this.Open(_ExcelBook);
 		}
 
-		/// <summary>
-		/// アクセス先のExcelブックを設定する。
-		/// </summary>
-		/// <param name="_ExcelBook">アクセス先のブック</param>
+		/// <summary>アクセス先のExcelブックを設定する</summary>
+		/// <param name="_Book">アクセス先のブック</param>
 		/// <exception cref="ArgumentNullException">アクセス先のブックがnullだった場合</exception>
-		public void SetBook(Excel.Workbook _ExcelBook)
+		public void Open(Excel.Workbook _Book)
 		{
-			this.ReleaseBook();
+			if (_Book is null) throw new ArgumentNullException(nameof(_Book));
 
-			this._ExcelBook = _ExcelBook ?? throw new ArgumentNullException(nameof(_ExcelBook));
-			this._ExcelSheets = this._ExcelBook.Sheets;
+			this.Close();
+
+			this._Book = _Book;
+			this._Sheets = this._Book.Sheets;
 		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="_SheetIndex"></param>
-		/// <returns></returns>
-		public ExcelSheetAccessor Open(object _SheetIndex)
-		{
-			try
-			{
-				return new ExcelSheetAccessor(_ExcelSheets[_SheetIndex]);
-			}
-			catch (Exception e)
-			{
-				throw new Exception("[" + _SheetIndex + "] の追加に失敗しました", e);
-			}
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="_SheetName"></param>
-		/// <returns></returns>
-		public ExcelSheetAccessor Add(string _SheetName)
-		{
-			Excel.Worksheet _ExcelSheet = null;
-
-			try
-			{
-				_ExcelSheet = _ExcelSheets.Add();
-				_ExcelSheet.Name = _SheetName;
-
-				return new ExcelSheetAccessor(_ExcelSheet);
-			}
-			catch (Exception e)
-			{
-				this.ReleaseObject(_ExcelSheet);
-
-				throw new Exception("[" + _SheetName + "] の追加に失敗しました", e);
-			}
-		}
-
-		/// <summary>
-		/// ブックを保存する
-		/// </summary>
-		/// <param name="_FilePath">保存先のパス。新規保存したいときのみ必要</param>
-		public void Save(string _FilePath = "")
-		{
-			if (_FilePath != "")
-			{
-				_ExcelBook.SaveAs(_FilePath);
-				return;
-			}
-
-			if (_ExcelBook.Path != "")
-			{
-				_ExcelBook.Save();
-				return;
-			}
-		}
-
+		
+		/// <summary>Excelブックを閉じる</summary>
 		public void Close()
 		{
-			if (_ExcelBook != null)	_ExcelBook.Close();
-		}
-
-		/// <summary>
-		/// Objectを開放する
-		/// </summary>
-		private void ReleaseObject(object _Obj)
-		{
-			if (_Obj != null)
+			if (_Book != null)
 			{
-				while (Marshal.ReleaseComObject(_Obj) > 0) ;
-				_Obj = null;
+				_Book.Close();
+				this.Dispose();
 			}
 		}
 
-		private void ReleaseBook()
-		{
-			// Sheets解放
-			this.ReleaseObject(_ExcelSheets);
-
-			// Book解放
-			this.ReleaseObject(_ExcelBook);
-		}
-
-		protected virtual void Dispose(bool _Disposing)
-		{
-			if (!_DisposeValue)
-			{
-				if (_Disposing)	{}
-
-				this.ReleaseBook();
-			}
-		}
-
+		/// <summary>リソースを開放する</summary>
 		public void Dispose()
 		{
 			this.Dispose(true);
@@ -147,9 +66,42 @@ namespace SuzuOffice.Excel
 			this.Dispose(false);
 		}
 
+		public ref Excel.Workbook Book { get => ref _Book; }
+		public ref Excel.Sheets Sheets { get => ref _Sheets; }
+
+		//*************************************************************************************************//
+		//private method
+		//*************************************************************************************************//
+
+		protected virtual void Dispose(bool _Disposing)
+		{
+			if (!_DisposeValue)
+			{
+				if (_Disposing)	{}
+
+				// Sheets解放
+				if (_Sheets != null)
+				{
+					while (Marshal.ReleaseComObject(_Sheets) > 0);
+					_Sheets = null;
+				}
+
+				// Book解放
+				if (_Book != null)
+				{
+					while (Marshal.ReleaseComObject(_Book) > 0);
+					_Book = null;
+				}
+			}
+		}
+
+		//*************************************************************************************************//
+		//private field
+		//*************************************************************************************************//
+
 		private bool _DisposeValue = false;
 		
-		private Excel.Workbook _ExcelBook = null;
-		private Excel.Sheets _ExcelSheets = null;
+		private Excel.Workbook _Book = null;
+		private Excel.Sheets _Sheets = null;
 	}
 }

@@ -53,6 +53,7 @@
     <Compile Include="ExtensionChecker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TheOpenAppCapture.cs" />
+    <Compile Include="VBProjectOperater.cs" />
     <Compile Include="Visio\VisioAppAccessor.cs" />
     <Compile Include="Visio\VisioAppFeatures.cs" />
     <Compile Include="Visio\VisioOpener.cs" />
